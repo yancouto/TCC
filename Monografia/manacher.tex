@@ -1,0 +1,142 @@
+\chapter{Palíndromos} \label{chap:manacher}
+
+\section{Palíndromos ímpares}
+Seja~$S$ uma string. Dizemos que~$S$ é um \emph{palíndromo} se~${S[i] = S[|S| - i + 1]}$ para todo~${1 \leq i \leq |S|}$. Defina~$\overline{S}$ como a string~${S[|S|]S[|S|-1]\cdots S[2]S[1]}$, ou seja,~$S$ com caracteres de trás para frente. Alternativamente, a string~$S$ é um palíndromo se e somente se~$S = \overline{S}$. Dizemos que~$S$ é um palíndromo \emph{ímpar} se~$S$ é um palíndromo de comprimento ímpar. Nesse caso dizemos que esse palíndromo é \emph{centrado} em~$\frac{|S| + 1}{2}$. A string~\texttt{reviver}, por exemplo, é um palíndromo ímpar centrado no índice da letra~\texttt{i}.
+
+Vamos considerar substrings de~$S$ que são palíndromos. Vamos apresentar um algoritmo, inicialmente proposto por Manacher~\cite{manacher}, que, para cada~${1 \leq i \leq |S|}$, determina a maior substring palíndroma ímpar de~$S$ centrada em~$i$. Esse algoritmo consome tempo~$\Oh(|S|)$. Mais precisamente, defina~${\Center(S, i, k)}$ como a string~${S[i-k\tdots i+k]}$, se esta estiver definida, ou seja, se~${i-k \geq 1}$ e~$i+k \leq |S|$. Queremos criar um vetor~$M$ tal que, para cada~${1 \leq i \leq |S|}$, vale que~$M[i]$ é o maior valor tal que~${\Center(S, i, M[i])}$ é um palíndromo. Dizemos que~$M[i]$ é o \emph{alcance} de~$i$.
+Note que~${\Center(S, i, 0)}$ é sempre palíndromo.
+
+\begin{prop}
+\label{prop:palcenter}
+Para todo~${k > 0}$, temos que~$\Center(S, i, k)$ é palíndromo se e somente se~$\Center(S, i, k - 1)$ é palíndromo e~${S[i - k] = S[i + k]}$.
+\end{prop}
+
+\begin{proof}
+Temos pela definição que~$\Center(S, i, k)$ é palíndromo se e somente se, para todo~${1 \leq j \leq 2k+1}$, vale a igualdade~${S[i - k + j - 1] = S[i + k - j + 1]}$. A string~${\Center(S, i, k-1)}$ é um palíndromo quando~${S[i - k + g] = S[i + k - g]}$ para todo~${1 \leq g \leq 2k-1}$. Mas estas igualdades são equivalentes às igualdades para~${j \in \{2, \ldots, 2k\}}$.
+
+Para~${j = 1}$, temos que~${S[i - k + 1 - 1] = S[i + k - 1 + 1]}$ e, para~${j = 2k+1}$, temos a igualdade~${S[i - k + 2k + 1 - 1] = S[i + k - 2k - 1 + 1]}$, ou seja, ambas expressam simplesmente que~${S[i - k] = S[i + k]}$.
+\end{proof}
+
+A ida da proposição implica que os números~$k$ que satisfazem que~$\Center(S, i, k)$ é um palíndromo são um prefixo de~${\{0, 1, \ldots\}}$. A volta mostra como descobrir se~$M[i] > x$ para alguma estimativa~$x$. Dessa forma, já é possível criar um algoritmo simples para calcular o vetor~$M$, como no Código~\ref{lst:simple}.
+
+\begin{algorithm}[H]
+\caption{Algoritmo simples para alcances} \label{lst:simple}
+\begin{algorithmic}[1]
+\For{$i = 1 \To |S|$}
+    \State $x = 0$
+    \While{$i - x > 1 \And i + x < |S| \And S[i - x - 1] = S[i + x + 1]$}
+        \State $x \pluseq 1$
+    \EndWhile
+    \State $M[i] = x$
+\EndFor
+\end{algorithmic}
+\end{algorithm}
+
+Nesse algoritmo, a partir do zero, aumentamos a estimativa para~$M[i]$, armazenada em~$x$, enquanto temos que~$x < M[i]$. As primeiras duas condições do~\keyword{while} garantem que a string~$\Center(S, i, x + 1)$ está bem definida. A complexidade deste código é~${\Theta(\sum\limits_{i=1}^{|S|}{M[i]}) = \Oh(|S|^2)}$ e sua corretude segue diretamente da Proposição~\ref{prop:palcenter}.
+
+\section{Uso de alcances anteriores}
+
+Vamos apresentar um algoritmo com ideia similar a esse, que também calcula os valores de~$M$ em ordem crescente de índice, e aumenta a estimativa de~$M[i]$ de um em um. Porém, esse algoritmo usa os valores anteriormente calculados para começar de um valor inicial maior para~$x$.
+
+\begin{figure}[h]
+\begin{center}
+\begin{tikzpicture}
+\matrix[matrix of nodes, nodes in empty cells,
+row 1/.style={nodes={draw, minimum size = 5mm}}] (array) {
+x & a & s & a & c & a & r & a & c & a & s & a & x \\};
+
+\path ([yshift=3]array-1-1.north) edge [bend left] ([yshift=10]array-1-7.north);
+\path ([yshift=10]array-1-7.north) edge [bend left]  ([yshift=3]array-1-13.north);
+\node at ([yshift=20]array-1-7.north) {$k$};
+\path[dashed] ([yshift=15]array-1-7.north) edge (array-1-7.north);
+
+\path ([yshift=-2]array-1-1.south) edge [bend right] ([yshift=-7]array-1-3.south);
+\path ([yshift=-7]array-1-3.south) edge [bend right] ([yshift=-2]array-1-5.south);
+\node at ([yshift=-15]array-1-3.south) {$i'$};
+\path[dashed] ([yshift=-10]array-1-3.south) edge (array-1-3.south);
+
+
+\path ([yshift=-2]array-1-9.south) edge [bend right] ([yshift=-7]array-1-11.south);
+\path ([yshift=-7]array-1-11.south) edge [bend right] ([yshift=-2]array-1-13.south);
+\node at ([yshift=-15]array-1-11.south) {$i$};
+\path[dashed] ([yshift=-10]array-1-11.south) edge (array-1-11.south);
+
+\end{tikzpicture}
+\end{center}
+    \caption{Explicação da Proposição~\ref{prop:palcover}.}
+    \label{fig:palcover}
+\end{figure}
+
+\begin{prop}
+\label{prop:palcover}
+Seja~$k < i$ tal que~$k + M[k] > i$. Se~${i + M[2k - i] < k + M[k]}$ então vale que~${M[i] = M[2k - i]}$. Caso contrário, temos que~${M[i] \geq k + M[k] - i}$.
+\end{prop}
+
+\begin{proof}
+Note que, como~${k + M[k] > i}$, a posição~$i$ está contida na string~$\Center(S, k, M[k])$. Tome~${g = k + M[k] - i}$, que é a distância de~$i$ para a posição final de~$\Center(S, k, M[k])$, e~${i' = k-(i-k)= 2k-i}$, que é a posição~$i$ espelhada em torno do centro~$k$. Note que~${S[i'] = S[i]}$, e generalizando isto, usando a definição de palíndromo, temos que~$\Center(S, i, g) = \overline{\Center(S, i', g)}$. A Figura~\ref{fig:palcover} mostra como isso pode ocorrer para a palavra~\texttt{xasacaracasax}. Note que, nesse caso,~${M[k] = 6}$,~${g = 2}$ e temos que~${\Center(S, i, 2) = \overline{\Center(S, i', 2)} = \texttt{casax}}$.
+
+Note que a string~$P$ é um palíndromo se e somente se~$\overline{P}$ é um palíndromo.
+Logo, se~${M[i'] < g}$, como~$M[i']$ é o maior palíndromo centrado em~$i'$, temos pela Proposição~\ref{prop:palcenter} que~${S[i'-M[i']-1] \neq S[i'+M[i']+1]}$, e portanto~${S[i +M[i']+1] \neq S[i-M[i']-1]}$. Além disso,~${\Center(S, i, M[i']) = \overline{\Center(S, i', M[i'])}}$, o que prova que~${M[i] = M[i']}$. Esse caso é o que ocorre na Figura~\ref{fig:palcover}, onde podemos determinar que, já que~${M[i'] = 1 < g}$, temos que~${M[i] = 1}$.
+
+Se~$M[i'] \geq g$, temos que~${\Center(S, i, g) = \overline{\Center(S, i', g)}}$ e este é um palíndromo, logo~${M[i] \geq g}$. Porém, não temos informação para delimitar superiormente o valor de~$M[i]$ pois a string~$\Center(S, i', M[i']+1)$ ultrapassa os limites de~$\Center(S, k, M[k])$, e portanto não pode ser comparada com~$\Center(S, i, M[i']+1)$.
+\end{proof}
+
+A proposição nos mostra uma forma de usar valores anteriormente calculados para otimizar o cálculo de~$M[i]$. Note que no primeiro caso, quando~${M[i'] < g}$, conseguimos calcular~$M[i]$ só usando valores calculados, e no segundo caso, quando~${M[i'] \geq g}$, podemos começar~$x$ de~${k + M[k] - i}$. Então, ao tentar maximizar o valor inicial de~$x$, é interessante escolher~$k$ já calculado que maximize~${k + M[k]}$.
+
+\section{Algoritmo}
+
+\begin{algorithm}
+\caption{Cálculo dos alcances em tempo linear} \label{lst:mana}
+\begin{algorithmic}[1]
+\State $k = -1$
+\For{$i = 1 \To |S|$} \label{man:for}
+    \If{$k \neq -1 \And k + M[k] > i \And i + M[2k - i] < k + M[k]$} \label{man:caso1} \Comment{Caso (a)}
+        \State $M[i] = M[2k - i]$
+    \Else
+        \If{$k \neq -1 \And k + M[k] > i$} \label{man:caso2} \Comment{Caso (b)}
+            \State $x = k + M[k] - i$
+        \Else \label{man:caso3} \Comment{Caso (c)}
+            \State $x = 0$
+        \EndIf
+        \While{$i - x > 1 \And i + x < |S| \And S[i - x - 1] = S[i + x + 1]$}  \label{man:while}
+            \State $x \pluseq 1$
+        \EndWhile
+        \State $M[i] = x$ \label{man:updx}
+        \State $k = i$ \label{man:updk}
+    \EndIf
+\EndFor
+\end{algorithmic}
+\end{algorithm}
+
+
+O algoritmo no Código~\ref{lst:mana} utiliza essas ideias para calcular o vetor~$M$. Iremos mostrar que a variável~$k$ guarda um índice que maximiza o valor~${k + M[k]}$, ou~$-1$ na primeira iteração.
+
+\subsection{Correção}
+O caso (a), quando a primeira parte da Proposição~\ref{prop:palcover} vale, é identificado pelo~\keyword{if} da linha~\nref{man:caso1}. Nesse caso o valor de~$M[i]$ já é calculado usando apenas~$M[2k-i]$ e nada mais precisa ser feito.
+
+Os dois casos restantes são: (b) quando a segunda parte Proposição~\ref{prop:palcover} se aplica e (c) quando esta proposição não se aplica pois nenhum alcance anterior cobre~$i$. Note que em ambos os casos temos uma cota inferior para~$x$ e então aumentamos~$x$ a partir desta cota. No caso (b), a cota é~${k + M[k] - i}$ e esse caso é tratado no~\keyword{if} da linha~\nref{man:caso2}. Note que se a condição desse~\keyword{if} for satisfeita, então~${i + M[2k-i] \geq k + M[k]}$ (pois a condição do~\keyword{if} da linha~\nref{man:caso1} não foi satisfeita), logo a segunda parte da proposição se aplica. No caso (c), a cota é~$0$ e esse caso é tratado no~\keyword{else} da linha~\nref{man:caso3}. Em ambos estes casos o~\keyword{while} da linha~\nref{man:while} aumenta~$x$ enquanto possível, como no código anterior, e está correto pela Proposição~\ref{prop:palcenter}.
+
+Resta mostrar que o valor de~$k$ é atualizado corretamente. No caso (a) temos que~$$i + M[i] = i + M[2k - i] < i + k + M[k] - i = k + M[k],$$ logo o valor de~$k$ não deve ser atualizado.
+No caso (c), claramente~$k$ deve ser atualizado, e no caso (b) temos que~$$i + M[i] \geq i + k + M[k] - i = k + M[k],$$ pois pela segunda parte da Proposição~\ref{prop:palcover} vale que~${M[i] \geq k + M[k] - i}$, logo podemos atualizar~$k$. A linha~\nref{man:updk} então atualiza~$k$ corretamente em ambos estes casos, e o código está correto.
+
+\subsection{Complexidade}
+Resta mostrar que o algoritmo leva tempo linear. O~\keyword{for} da linha~\nref{man:for} realiza~$|S|$ iterações, e, exceto pelo~\keyword{while} da linha~\nref{man:while}, todas as operações levam tempo constante, totalizando tempo linear.
+
+Para analisar o tempo do~\keyword{while}, vamos considerar como o valor de~${k + M[k]}$ muda durante o algoritmo. Quando tratamos o primeiro caso, este valor não muda.
+Ao tratar os outros casos, esse valor muda pois mudamos~$k$ para~$i$ na linha~\nref{man:updk}. Como discutido anteriormente, no caso (b) temos que~${i + M[i] \geq i + k + M[k] - i = k + M[k]}$, e no caso (c) temos que~${i + M[i] \geq i > k + M[k]}$ pois nesse caso o intervalo de~$k$ não cobre~$i$. Logo, a atribuição na linha~\nref{man:updk} nunca diminui o valor de~${k + M[k]}$.
+
+Além disso, toda iteração do~\keyword{while} aumenta o valor de~$x$, e pela linha~\nref{man:updx} sabemos que~$x$ ao final do~\keyword{while} é o valor de~$M[i]$. Então, devido à linha~\nref{man:updk}, cada iteração do~\keyword{while} aumenta em~$1$ o valor de~$k + M[k]$ ao final da iteração. Pela própria definição de alcance temos que~$k + M[k] \leq |S|$, e portanto o número de iterações do~\keyword{while} entre todas as iterações do~\keyword{for} não excede~$|S|$, e o tempo total consumido pelo algoritmo é~$\Oh(|S|)$.
+
+\section{Palíndromos pares}
+Para conseguirmos informações sobre os palíndromos de tamanho par, é possível criar um vetor que na posição~$i$ guarda qual o maior palíndromo par centrado em~$i$ (um palíndromo par tem dois centros, então é preciso escolher um deles). As Proposições~\ref{prop:palcenter} e \ref{prop:palcover} podem ser adaptadas para palíndromos pares, e assim também o algoritmo.
+
+Entretanto, é possível modificar a string~$S$ de forma que possamos usar o mesmo algoritmo (Código~\ref{lst:mana}) para encontrar palíndromos pares. Para transformar um palíndromo par em um ímpar, é possível apenas adicionar um caractere qualquer após metade dos caracteres desse palíndromo. Esse novo caractere será o centro de um palíndromo ímpar. Como não sabemos o centro dos palíndromos, adicionamos um mesmo caractere entre todos os caracteres adjacentes.
+
+Considere a string~$\Fill(S) = S[1]\$S[2]\$\ldots\$S[|S|]$, ou seja, a string~$S$ com caracteres~$\$$ inseridos entre todos os caracteres. Se~$S[i \tdots j]$ é um palíndromo, então a substring~${\Fill(S)[2i-1 \tdots 2j-1]}$ também é um palíndromo, e este palíndromo em~$\Fill(S)$ tem comprimento ímpar, independente se tinha comprimento par ou ímpar em~$S$. Observe que, se o palíndromo era ímpar, então o centro do novo palíndromo continua o mesmo, mas se o palíndromo era par, o novo centro é o caractere~$\$$ entre os dois centros originais.
+
+Os novos palíndromos, entretanto, têm comprimento maior que na string original. Se~$M$ é o vetor de alcances calculado para a string~$\Fill(S)$, temos que, para todo~$1 \leq i \leq |S|$, a posição~$i$ tem alcance~${\floor{\frac{M[2i-1]}{2}}}$, ou seja, a substring~${S[i - \floor{\frac{M[2i-1]}{2}}\tdots i + \floor{\frac{M[2i-1]}{2}}]}$ é o maior palíndromo ímpar com centro em~$i$. Além disso, para cada~$\$$ em~$\Fill(S)$, ou seja, em toda posição par~$i = 2k$ de~$\Fill(S)$, se~${M[i] > 0}$, então~${S[k - \ceil{\frac{M[i]}{2}} + 1 \tdots k + \ceil{\frac{M[i]}{2}}]}$ é o maior palíndromo par de~$S$ com centros~$k$ e~${k + 1}$.
+
+Com essas informações, é possível usar o algoritmo aplicado a~$\Fill(S)$ para ter a informação sobre todos os palíndromos de~$S$. Note que~$|\Fill(S)| = 2|S| - 1$, então o consumo de tempo continua linear.
+
+\section{Usos}
+Com o vetor~$M$ calculado, é possível descobrir o tamanho da maior substring de~$S$ que é um palíndromo em tempo linear. Basta verificar, para todos os centros, qual o maior palíndromo com aquele centro. Além disso, dados dois índices~$i$ e~$j$, é possível, em tempo constante, determinar se~$S[i\tdots j]$ é um palíndromo. Basta calcular qual seria o centro desse palíndromo, e verificar, na posição correspondente de~$M$, se esta substring é um palíndromo.

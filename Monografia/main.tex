@@ -1,0 +1,337 @@
+\documentclass[11pt,oneside,a4paper, openany]{book}
+\usepackage[usenames, dvipsnames]{xcolor}
+\usepackage[utf8]{inputenc}
+\usepackage[portuguese]{babel}
+\usepackage[a4paper,top=3cm,bottom=2.3cm,left=2.2cm,right=2.2cm]{geometry} % margens
+\usepackage{amsthm}
+\usepackage{mathtools}
+\usepackage{amssymb}
+\usepackage{listings}
+\usepackage{tikz}
+\usepackage{tikz-qtree}
+\usepackage{minted}
+\usepackage{xspace}
+\usepackage{subfig}
+\usepackage{algorithm}
+\usepackage[noend]{algpseudocode}
+\usepackage{import}
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks,
+    citecolor=violet!85!black,
+    linkcolor=MidnightBlue
+}
+\usepackage{lmodern}
+
+%\renewcommand*\thesection{\arabic{section}}
+
+\renewcommand{\baselinestretch}{1.3}
+
+%% BIBTEX
+\usepackage{csquotes}
+\usepackage[
+backend=biber,
+style=alphabetic,
+sorting=nty,
+maxbibnames=10
+]{biblatex}
+\addbibresource{ref.bib}
+\renewbibmacro*{volume+number+eid}{%
+  \printfield{volume}%
+%  \setunit*{\adddot}% DELETED
+  \setunit*{\addnbspace}% NEW (optional); there's also \addnbthinspace
+  \printfield{number}%
+  \setunit{\addcomma\space}%
+  \printfield{eid}}
+\DeclareFieldFormat[article]{number}{\mkbibparens{#1}}
+%%%
+
+\renewcommand\listingscaption{Código}
+
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\let\And\undefined
+\let\Or\undefined
+
+\algrenewcommand\algorithmicthen{:}
+\algrenewcommand\algorithmicdo{:}
+\algnewcommand\And{\textbf{ and }}
+\algnewcommand\Or{\textbf{ or }}
+\algnewcommand\New{\textbf{ new }}
+\algnewcommand\To{\textbf{ to }}
+\algnewcommand\DownTo{\textbf{ down to }}
+\algnewcommand\Break{\textbf{break}}
+\algnewcommand\Null{\textbf{null}}
+\algnewcommand\True{\textbf{true}}
+\makeatletter
+ \renewcommand{\ALG@name}{Código}
+\makeatother
+\algdef{SE}[SUBALG]{Indent}{EndIndent}{}{\algorithmicend\ }%
+\algtext*{Indent}
+\algtext*{EndIndent}
+
+\newcommand{\pluseq}{\mathbin{{\tiny +}{=}}}
+
+\definecolor{mygreen}{rgb}{0,0.6,0}
+\definecolor{mygray}{rgb}{0.5,0.5,0.5}
+\definecolor{mymauve}{rgb}{0.58,0,0.82}
+
+\renewcommand{\ttdefault}{pcr}
+
+\newtheorem{theorem}{Teorema}[section]
+\newtheorem*{complexity}{Complexidade}
+\newtheorem{corollary}{Corolário}[theorem]
+\newtheorem{lemma}[theorem]{Lema}
+\newtheorem{prop}[theorem]{Proposição}
+\newtheorem*{definition}{Definição}
+\newtheorem*{invar}{Invariante}
+
+\newcommand{\len}[1]{\mathit{len}(#1.s)}
+\newcommand{\suf}{\mathit{suf}}
+\newcommand{\ns}{\mathit{ns}}
+\newcommand{\cd}{\mathit{cd}}
+\newcommand{\cn}{\mathit{cn}}
+\newcommand{\mmid}{\mathit{mid}}
+\newcommand{\node}{\mathit{node}}
+\newcommand{\mrk}{\mathit{mrk}}
+%automata
+\renewcommand{\root}{\mathit{root}}
+\newcommand{\last}{\mathit{last}}
+\newcommand{\Path}{\textsc{Path}}
+\newcommand{\final}{\mathit{final}}
+%manacher
+\newcommand{\Center}{\textsc{Center}}
+\newcommand{\Fill}{\textsc{Fill}}
+\newcommand{\floor}[1]{\left \lfloor #1 \right \rfloor}
+\newcommand{\ceil}[1]{\left \lceil #1 \right \rceil}
+
+\newcommand{\cS}{\mathcal{S}}
+\newcommand{\E}{\Sigma}
+\newcommand{\keyword}[1]{\textbf{#1}}
+\newcommand{\code}[1]{$#1$}
+\newcommand{\Oh}{\mathcal{O}}
+\newcommand{\pref}{\sqsubseteq}
+\newcommand{\suff}{\sqsupseteq}
+\newcommand{\prefp}{\sqsubset}
+\newcommand{\suffp}{\sqsupset}
+\newcommand{\pop}{\textsc{Pop}}
+\newcommand{\tdots}{\,.\,.\,} % in place of \ldots
+\newcommand{\func}[2]{\textsc{#1}$(#2)$}
+\newcommand{\M}[1]{\mathcal{#1}}
+\newcommand*{\nref}[1]{%
+  {\protect\NoHyper\ref{#1}\protect\endNoHyper}%
+}
+
+%% AUTOMATON
+\newcommand{\emptystring}{\varepsilon}
+\newcommand{\stfail}{\eta}
+\newcommand{\impl}{\Rightarrow}
+%\newcommand{\iff}{\Leftrightarrow}
+\usetikzlibrary{matrix,backgrounds, decorations.pathreplacing, automata, arrows}
+
+%%%% COPIADO
+\usepackage{setspace}                   % espaçamento flexível
+\usepackage{indentfirst}                % indentação do primeiro parágrafo
+\usepackage{type1cm}                    % fontes realmente escaláveis
+\usepackage{titletoc}
+\usepackage[font=small,format=plain,labelfont=bf]{caption}
+\usepackage{courier}                    % usa o Adobe Courier no lugar de Computer Modern Typewriter
+
+
+\fontsize{60}{62}\usefont{OT1}{cmr}{m}{n}{\selectfont}
+
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\chaptermark}[1]{\markboth{\MakeUppercase{#1}}{}}
+\renewcommand{\sectionmark}[1]{\markright{\MakeUppercase{#1}}{}}
+\renewcommand{\subsectionmark}[1]{}
+\renewcommand{\headrulewidth}{0pt}
+\fancyhead[R]{{\footnotesize\rightmark}}
+\fancyhead[L]{{\footnotesize\leftmark}}
+\fancyfoot[C]{{\thepage}}
+%\setcounter{tocdepth}{2}
+\setlength{\headheight}{13.6pt} 
+%%%%
+
+\title{Algoritmos em sequências}
+\author{Yan Couto}
+\date{\today}
+
+\sloppy
+
+\begin{document}
+
+%%%%%% COPIADO
+\frontmatter 
+% cabeçalho para as páginas das seções anteriores ao capítulo 1 (frontmatter)
+
+\onehalfspacing  % espaçamento
+
+% ---------------------------------------------------------------------------- %
+% CAPA
+% Nota: O título para as dissertações/teses do IME-USP devem caber em um 
+% orifício de 10,7cm de largura x 6,0cm de altura que há na capa fornecida pela SPG.
+\thispagestyle{empty}
+\begin{center}
+    \vspace*{2.3cm}
+    \textbf{\huge{Algoritmos em sequências}}\\
+    
+    \vspace*{1cm}
+    \Large{Yan Soares Couto}
+
+    \vskip 1.8cm
+    Orientadora: Cristina G. Fernandes\\
+
+    \vspace{\fill}
+    \normalsize{São Paulo, 2016}
+\end{center}
+
+% ---------------------------------------------------------------------------- %
+% Resumo
+\chapter*{Resumo}
+
+\noindent COUTO, Y. S. \textbf{Algoritmos em sequências}. 
+ Instituto de Matemática e Estatística,
+Universidade de São Paulo, São Paulo, 2016.
+\\
+
+Algoritmos em sequências são úteis para buscas de padrões e em biologia computacional. É possível descobrir a maior substring palíndroma de uma string em tempo linear. Tries são estruturas para armazenamento de string, permitindo buscas rápidas por prefixos. Pode-se usar uma trie para buscar um conjunto de strings, como padrão, em uma sequência. A construção de uma trie para todos os sufixos de uma string pode ser feita em tempo linear. Pode-se construir um autômato que reconhece todos os sufixo de uma string em espaço e tempo linear.
+\\
+
+\noindent \textbf{Palavras-chave:} algoritmo, string, trie, autômato, palíndromo.
+
+
+% ---------------------------------------------------------------------------- %
+\pagenumbering{gobble}
+% Sumário
+\begingroup
+\let\cleardoublepage\clearpage
+\tableofcontents
+\endgroup
+
+% ---------------------------------------------------------------------------- %
+% Capítulos do trabalho
+\mainmatter
+
+% cabeçalho para as páginas de todos os capítulos
+
+%\singlespacing              % espaçamento simples
+\onehalfspacing            % espaçamento um e meio
+\pagenumbering{arabic}
+%%%%%
+
+\setcounter{secnumdepth}{0}
+
+
+\chapter*{Introdução}
+\chaptermark{Introdução}
+\addcontentsline{toc}{chapter}{Introdução}
+
+
+Encontrar todas as ocorrências de uma certa palavra em um texto é um problema muito importante, que vemos diariamente, por exemplo ao buscar uma palavra-chave em nossos emails recebidos ou em algum documento.
+
+Nessa classe de problemas, de busca de ocorrências exatas, não são aceitas diferenças entre o padrão buscado e as posições de ocorrência retornadas. Outra classe de problemas é de busca de ocorrências inexatas, ou busca de ocorrências aproximadas, quando algumas diferenças são aceitas. Nesse caso é necessário adotar alguma definição de similaridade entre duas cadeias de caracteres, em geral o número mínimo de caracteres que precisam ser mudados para tornar ambas cadeias iguais. O utilitário \texttt{diff}, por exemplo, encontra o número mínimo de linhas que precisam ser mudadas para tornar dois arquivos iguais.
+
+Outra área que se beneficia do desenvolvimento de algoritmos para tais problemas é a área da biologia computacional, pois DNA pode ser modelado como uma sequência de caracteres \texttt{A}, \texttt{T}, \texttt{C} e \texttt{G}. Assim, é possível encontrar similaridades entre trechos de DNAs diferentes, e buscar, em um conjunto enorme de trechos de DNA, algum similar ou idêntico a um trecho dado. Proteínas também podem ser modeladas como sequências de aminoácidos.
+
+Os assuntos discutidos nesse trabalho são também muito úteis para praticantes de programação competitiva, pois os algoritmos abordados podem ser usados na resolução de vários problemas não triviais envolvendo strings, e têm implementação pequena.
+
+\section{Objetivos e estrutura do texto}
+
+Neste trabalho, apresentamos algoritmos e estruturas de dados relacionados a problemas de busca de ocorrências exatas. Os algoritmos clássicos para encontrar ocorrências exatas, como KMP e Boyer-Moore, não são abordados. O foco é em estruturas mais poderosas, que generalizam os algoritmos clássicos, são mais rápidas ou, quando mais complicadas, resolvem problemas mais difíceis.
+
+Diferentemente dos livros e fontes mais comuns, a implementação é bastante discutida, com pseudocódigo usando apenas instruções presentes nas principais linguagens de programação. Porém, a teoria não é esquecida. Ao apresentar os algoritmos e suas explicações, a corretude e complexidade são provadas formalmente, em detalhes, de maneira tão completa quanto possível.
+
+O Capítulo~\ref{chap:manacher} trata de um algoritmo útil para encontrar palíndromos em uma cadeia de caracteres, e é o tema que menos se relaciona à busca de ocorrências exatas, apesar de ser bastante similar a um algoritmo que serve justamente para busca de ocorrências exatas.
+
+O Capítulo~\ref{chap:trie} apresenta uma estrutura de dados chamada trie, com a qual é possível armazenar um conjunto de strings de forma inteligente. Esta estrutura é usada nos dois capítulos seguintes de forma mais extensa.
+
+O Capítulo~\ref{chap:aho} apresenta uma generalização de KMP que funciona com tries e não apenas strings, e dessa forma é possível buscar ocorrências de várias strings ao mesmo tempo.
+
+O Capítulo~\ref{chap:suffixtree} mostra como construir uma trie para todos os sufixos de uma string, mas sem gastar tempo ou espaço proporcional ao tamanho de todos estes. Essa estrutura é extremamente poderosa, podendo de certa forma generalizar o algoritmo do Capítulo~\ref{chap:aho}.
+
+O Capítulo~\ref{chap:suffixautomaton} apresenta um autômato que identifica todos os sufixos de uma string, e é tão poderoso quanto a estrutura do Capítulo~\ref{chap:suffixtree}.
+
+As principais fontes usadas neste trabalho foram os livros de Gusfield~\cite{gusfield} e Crochemore, Hancart e Lecroq~\cite{crochemore}.
+
+\section{Notação e definições básicas}
+
+Uma \emph{string}~$T[1\tdots n]$ de tamanho~${|T| \coloneqq n}$ é um vetor de~$n$ elementos, onde todos elementos são de um alfabeto~$\E$ finito. Para facilitar a implementação, em geral assumimos que~${\E = \{0, \ldots, |\E| - 1\}}$, ou seja,~$\E$ tem uma ordem e seus elementos estão ``comprimidos'', mas nos exemplos usamos~${\E = \{\textnormal{a}, \ldots,  \textnormal{z}\}}$.
+
+Dizemos que~${T[i\tdots j] \coloneqq T[i] T[i+1] \ldots T[j]}$ é uma \emph{substring} de~$T$. Se~${T_1 = T_2[1\tdots i]}$, para algum~$1 \leq i \leq |T_2|$, então~$T_1$ é \emph{prefixo} de~$T_2$, denotado por~$T_1 \pref T_2$. Da mesma forma, se~${T_1 = T_2[i\tdots |T_2|]}$ então~$T_1$ é \emph{sufixo} de~$T_2$, denotado por~${T_1 \suff T_2}$.
+Um sufixo ou prefixo é \emph{próprio} se não é igual à string original, e nesse caso usamos~$\prefp$ e~$\suffp$. Ou seja,~${T_1 \prefp T_2}$ se e somente se ${T_1 \pref T_2}$ e ${T_1 \neq T_2}$.
+
+Dizemos que $T_1$ ocorre em~$T_2$ se~$T_1$ é uma substring de~$T_2$. Existe uma ocorrência de~$T_1$ em~$T_2$ na posição~$i$ se~${T_1 \pref T_2[i\tdots |T_2|]}$, ou seja, se~${T_1 = T_2[i \tdots i + |T_1| - 1]}$.
+
+\setcounter{secnumdepth}{3}
+
+
+\import{/}{manacher.tex}
+
+\import{/}{trie.tex}
+
+\import{/}{aho.tex}
+
+%==================================================================================================
+%=====SSSSSSSSSS===================================================================================
+%=====SSSSSSSSSS===================================================================================
+%=====SSSS==========UUUU====UUUU===FFFFFFFFFF==FFFFFFFFFFF===III==XXXX=========XXXXX===============
+%=====SSSS==========UUUU====UUUU===FFFFFFFFFF==FFFFFFFFFFF===III===XXXXX======XXXX=================
+%=====SSSSSSSSSS    UUUU====UUUU===FFF=========FFF===========III=====XXXX====XXXX==================
+%=====SSSSSSSSSS====UUUU====UUUU===FFFFFFF=====FFFFFFF=======III=======XXXX=XXX====================
+%===========SSSS====UUUU====UUUU===FFFFFFF=====FFFFFFF=======III=========XXXX======================
+%===========SSSS ===UUUU====UUUU===FFF=========FFF===========III========XX=XXX=====================
+%=====SSSSSSSSSS====UUUUUUUUUUUU===FFF=========FFF===========III======XXX====XXX===================
+%=====SSSSSSSSSS====UUUUUUUUUUUU===FFF=========FFF===========III====XXXX=======XXXX================
+%==================================================================================================
+
+
+%==================================================================================================
+%=====TTTTTTTTTTTTTT===RRRRRRR========EEEEEEEEEE===EEEEEEEEEE======================================
+%=====TTTTTTTTTTTTTT===RRR===RRR======EEEEEEEEEE===EEEEEEEEEE======================================
+%=========TTTTT========RRR=====RRR====EEE==========EEE=============================================
+%=========TTTTT========RRR====RR======EEE==========EEE=============================================
+%=========TTTTT========RRRRRRRR=======EEEEEE=======EEEEEE==========================================
+%=========TTTTT========RRR===RRR======EEEEEE=======EEEEEE==========================================
+%=========TTTTT========RRR====RRRR====EEE==========EEE=============================================
+%=========TTTTT========RRR=====RRR====EEEEEEEEE====EEEEEEEEE=======================================
+%=========TTTTT========RRR=====RRR====EEEEEEEEE====EEEEEEEEE=======================================
+
+\import{/}{tree.tex}
+
+
+%==================================================================================================
+%=====SSSSSSSSSS===================================================================================
+%=====SSSSSSSSSS===================================================================================
+%=====SSSS==========UUUU====UUUU===FFFFFFFFFF==FFFFFFFFFFF===III==XXXX=========XXXXX===============
+%=====SSSS==========UUUU====UUUU===FFFFFFFFFF==FFFFFFFFFFF===III===XXXXX======XXXX=================
+%=====SSSSSSSSSS    UUUU====UUUU===FFF=========FFF===========III=====XXXX====XXXX==================
+%=====SSSSSSSSSS====UUUU====UUUU===FFFFFFF=====FFFFFFF=======III=======XXXX=XXX====================
+%===========SSSS====UUUU====UUUU===FFFFFFF=====FFFFFFF=======III=========XXXX======================
+%===========SSSS ===UUUU====UUUU===FFF=========FFF===========III========XX=XXX=====================
+%=====SSSSSSSSSS====UUUUUUUUUUUU===FFF=========FFF===========III======XXX====XXX===================
+%=====SSSSSSSSSS====UUUUUUUUUUUU===FFF=========FFF===========III====XXXX=======XXXX================
+%==================================================================================================
+
+
+%==================================================================================================
+%=====AAAAAAAAAAAA=================================================================================
+%=====AAAA===AAAAA===UUU===UUU==TTTTTTTTTTTTT===OOOOOOOOOOO========================================
+%=====AAAA====AAAA===UUU===UUU==TTTTTTTTTTTTT===OOOOOOOOOOO========================================
+%=====AAAAAAAAAAAA===UUU===UUU======TTTT========OOO=====OOO========================================
+%=====AAAAAAAAAAAA===UUU===UUU======TTTT========OOO=====OOO========================================
+%=====AAAA====AAAA===UUU===UUU======TTTT========OOO=====OOO========================================
+%=====AAAA====AAAA===UUUUUUUUU======TTTT========OOOOOOOOOOO===...====...====...====================
+%=====AAAA====AAAA===UUUUUUUUU======TTTT========OOOOOOOOOOO===...====...====...====================
+%==================================================================================================
+
+\import{/}{automaton.tex}
+
+\import{/}{subjetiva.tex}
+
+\newpage
+\printbibliography
+
+\end{document}

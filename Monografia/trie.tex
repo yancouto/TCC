@@ -1,0 +1,84 @@
+\chapter{Tries} \label{chap:trie}
+
+\section{Definição}
+Uma \emph{arborescência} é uma árvore enraizada com arestas saindo da raiz, ou seja, um digrafo acíclico em que cada vértice tem grau de entrada no máximo 1, e existe um caminho da raiz para cada outro vértice. Dizemos que um vértice é uma \emph{folha} se tem grau de saída 0. Dizemos que um vértice é \emph{interno} se não é nem a raiz nem uma folha.
+
+\begin{definition}
+Uma trie é uma arborescência na qual cada aresta está associada um caractere, e de um mesmo nó não saem duas arestas associadas ao mesmo caractere.
+\end{definition}
+
+A todo nó de uma trie associa-se uma string que consiste da junção dos caracteres de todas arestas no caminho da raiz a esse nó. As strings de todos os nós são diferentes.
+
+Uma trie~$T$ é utilizada para armazenar um conjunto de strings~$\cS$. Para tanto, alguns nós de~$T$ são marcados e o conjunto de strings representado por~$T$ é o conjunto de strings associadas aos nós marcados.
+
+Dizemos que o \emph{tamanho} de um conjunto de strings~${\cS = \{S_1, \ldots, S_k\}}$ é a soma dos tamanhos de suas strings, ou seja,~$\sum\limits_{i=1}^k{|S_i|}$.
+
+
+\begin{figure}
+\centering
+\begin{tikzpicture}[sibling distance=25pt]
+\Tree [.{}
+[.m [.a [.m [.a [.t \node[draw]{a}; ] ] ] [.t \node[draw]{a}; ] ] ]
+[.o [.\node[draw]{i}; [.t \node[draw]{o}; ] ] [.m [.a \node[draw]{r}; ] ] ]
+]
+\end{tikzpicture}
+\caption{Uma trie~$T$ para~$\cS = $\{mamata, mata, oi, oito, omar\}.} \label{fig:triesimple}
+\end{figure}
+
+
+\section{Inserção} \label{sec:trieins}
+
+Se queremos que a string~$P$ tenha um nó associado a ela em~$T$, existe um jeito único de adicioná-la à trie. Basta começar pela raiz de~$T$ e percorrer as arestas~$P[1], \dots, P[|P|]$, criando-as se necessário. Esse procedimento leva tempo~$\Oh(|P||\E|)$ ou~$\Oh(|P|\lg|\E|)$, dependendo da implementação.
+
+Deve-se marcar os vértices associados a cada uma das strings de~$\cS$. Em geral estes são folhas, exceto se alguma string de~$\cS$ é prefixo de outra, como por exemplo no caso de \texttt{oi} na Figura \ref{fig:triesimple}.
+
+\section{Implementação}
+\label{sec:trieimpl}
+
+A grande dificuldade na implementação de uma trie~$T$ para~$\cS$ é decidir como guardar a arestas a partir de um vértice. O jeito mais simples é guardar, para cada nó, um vetor de~$|\E|$ posições com apontadores para outros nós, cada um associado a uma aresta. Os consumos de tempo mencionados no futuro levarão em conta essa forma simples de representar uma trie. Essa implementação gasta espaço~$\Oh(n|\E|)$, onde~$n$ é o tamanho de~$\cS$. Nesse caso cada acesso a uma aresta (ou mesmo descobrir se uma aresta específica existe) leva tempo~$\Oh(1)$.
+
+Outra forma de guardar as arestas pode ser com uma lista ligada ou um vetor, guardando apenas a informação das arestas existentes, nesse caso a estrutura gastaria espaço~$\Oh(n)$ mas os acessos levariam no pior caso tempo~$\Theta(|\E|)$. Uma forma melhor seria usar uma árvore de busca binária balanceada (ABBB), já que os caracteres são comparáveis. Isso consumiria espaço~$\Oh(n)$ e tempo~$\Oh(\lg|\E|)$ por acesso.
+
+Usamos que~$v(c)$ é o filho do vértice~$v$ pelo caractere~$c$, ou~\keyword{null} se não existir tal filho. Usamos que~$\textbf{new } \node()$ cria um novo nó com lista de adjacência vazia e não marcado, e que~$u.\mrk$ é um campo booleano que indica se tal nó é marcado. A função~\func{Add}{r, S} então adiciona a string~$P$ à trie com raiz~$r$.
+
+\begin{algorithm}
+\begin{algorithmic}[1]
+\Function{Add}{$r, P$}
+    \State $v = r$
+    \For{$c \in P[1\tdots |P|]$}
+        \If{$v(c) = \Null$}
+            \State $v(c) = \New \node()$ \label{trie:create}
+        \EndIf
+        \State $v = v(c)$
+    \EndFor
+    \State $v.\mrk = \True$
+\EndFunction
+\end{algorithmic}
+\caption{Adição em trie} \label{lst:trie}
+\end{algorithm}
+
+Utilizando a implementação de listas de adjacência com vetores, é possível implementar~$\textbf{new } \node()$ em tempo~$\Theta(|\E|)$, e então esse código consome tempo~$\Oh(|P||\E|)$. Começando~$r$ como um vértice vazio, e utilizando a função~\func{Add}{r, S} para toda string~$S \in \cS$, é então possível criar uma trie para~$\cS$ em tempo~$\Oh(n|\E|)$, onde~$n$ é o tamanho de~$\cS$.
+
+A função no~Código~\ref{lst:trie} funciona pois, como discutido na Seção~\ref{sec:trieins}, percorre o caminho indicado pela string~$P$, caractere por caractere, e a linha~\nref{trie:create} cria os vértices e arestas necessários quando este caminho não existe.
+
+\section{Utilidades}
+
+Com uma trie~$T$ para um conjunto de strings~$\cS = \{S_1, \ldots, S_k\}$, é possível, dada uma string~$P$, saber se~$P$ é alguma das strings de~$\cS$ em tempo~$\Oh(|P|)$, ou seja, independente do tamanho de~$\cS$. Para fazer isso, basta seguir em~$T$ o caminho~$P[1], \dots, P[|P|]$, se possível. Se for possível chegar ao final e o nó final for um dos nós marcados de~$T$, então~${P \in \cS}$. Se analisarmos o último nó que foi possível alcançar, este determina o maior prefixo comum de~$P$ e alguma string de~$\cS$.
+
+A função~\func{LCP}{r, P} faz exatamente isso, determinando o maior prefixo comum da string~$P$ com a trie~$T$ de raiz~$r$. Para descobrir se~$P \in \cS$, basta verificar se o retorno é~$|P|$ e o último vértice alcançado está marcado.
+
+\begin{algorithm}
+\begin{algorithmic}[1]
+\Function{LCP}{$r, P$}
+    \State $v = r$
+    \For{$i = 1 \To |P|$}
+        \If{$v(P[i]) = \Null$}
+            \State $\Return\ i - 1$
+        \EndIf
+        \State $v = v(P[i])$
+    \EndFor
+    \State $\Return\ |P|$
+\EndFunction
+\end{algorithmic}
+\caption{Maior prefixo comum em trie}
+\end{algorithm}

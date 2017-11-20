@@ -1,0 +1,648 @@
+\chapter{Autômato de sufixos} \label{chap:suffixautomaton}
+
+Ao construir e usar uma árvore de sufixos de~$P$, temos que cada vértice representa uma substring de~$P$, e isso é uma noção bem intuitiva, que facilita usar essa estrutura para resolver problemas com strings. No entanto, o número de vértices pode ser quadrático em~$|P|$, e por isso é necessário algumas vezes comprimi-la, o que complica o código.
+
+A estrutura de um autômato de sufixos, que veremos nesse capítulo, não envolve compressão de vértices, o que deixa o código mais simples, mas cada vértice representa algo menos intuitivo, ainda que bem útil.
+
+\section{Ocorrências à direita}
+
+Dizemos que~$i$ é uma ocorrência à direita de~$S$ em~$P$ se~$S \suff P[1\tdots i]$, ou seja,~$S$ ocorre em~$P$ começando na posição~$i - |S| + 1$.
+
+\begin{definition}
+Seja~$D_P(S) = \{i : S \suff P[1\tdots i] \}$ o conjunto das ocorrências à direita de~$S$ em~$P$. Se~$P$ estiver claro do contexto, escrevemos~$D(S)$ em vez de~$D_P(S)$. Se~${D_P(A) = D_P(B)}$, dizemos que~$A \equiv_P B$, ou seja,~$A$ e~$B$ estão na mesma classe de equivalência de ocorrências à direita. Da mesma forma, escrevemos~$A \equiv B$ se~$P$ está claro do contexto.
+\end{definition}
+
+É fácil notar que~$\equiv_P$ é uma relação de equivalência. Nesse capítulo, usaremos que~$AB$ é a concatenação das strings~$A$ e~$B$.
+
+Vamos provar alguns fatos sobre ocorrências à direita que ajudam a entender as classes de equivalência de~$\equiv$, e as provas envolvidas na criação do algoritmo. Só trabalharemos com strings que são substrings de~$P$, então pode-se assumir que o conjunto~$D$ das strings analisadas é não-vazio.
+
+\begin{lemma}
+\label{lem:R1}
+Se~$A \suff B$ então~$D(B) \subseteq D(A)$.
+\end{lemma}
+
+\begin{proof}
+Seja~$i \in D(B)$ uma ocorrência à direita de~$B$. Então~$B \suff P[1\tdots i]$. Como~$A \suff B$, temos que~$A \suff P[1\tdots i]$ e~$i \in D(A)$.
+\end{proof}
+
+\begin{lemma}
+\label{lem:R1.5}
+Se~$D(A) \subseteq D(B)$ então~$A \suff B$ ou~$B \suff A$.
+\end{lemma}
+
+\begin{proof}
+Se~$i \in D(A)$, então~$i \in D(B)$. Logo, neste caso,~$A \suff P[1\tdots i]$  e~$B \suff P[1\tdots i]$. Como~$A$ e~$B$ são sufixos da mesma string,~$A \suff B$ ou~$B \suff A$.
+\end{proof}
+
+\begin{corollary}
+\label{col:R2}
+Se~$A \equiv B$ e~$|A| \leq |B|$ então~$A \suff B$.
+\end{corollary}
+
+\begin{proof}
+Como~$A \equiv B$, temos que~$D(A) = D(B)$ e, pelo Lema~\ref{lem:R1.5},~$A \suff B$ ou~$B \suff A$. O resultado segue de~$|A| \leq |B|$.
+\end{proof}
+
+Isso mostra que todas as strings de uma classe de equivalência estão relacionadas pois são sufixos umas das outras.
+
+\begin{prop} \label{prop:classc}
+Se~$A \equiv B$, e~$c \in \E$, então~$Ac \equiv Bc$.
+\end{prop}
+
+\begin{proof}
+Note que para que~$i$ esteja em~$D(Ac)$ é necessário e suficiente que~${i-1 \in D(A)}$ e~${P[i] = c}$. Como~$D(A) = D(B)$, vale que~$D(Ac) = D(Bc)$ e assim~$Ac \equiv Bc$.
+\end{proof}
+
+Para todo~$A \neq \emptystring$, seja~$\stfail_P(A)$ a maior string~$B \suffp A$ tal que~$B \not\equiv_P A$. Note que~$A \not\equiv_P \emptystring$, logo~$\stfail_P(A)$ está bem definida. Dizemos que~$\stfail_P(A)$ é a \emph{string de falha} de~$A$ para~$P$. Se~$P$ está claro do contexto, escrevemos apenas~$\stfail(A)$.
+
+\begin{lemma}
+\label{lem:R4}
+Se~$A \equiv B$ então~$\stfail(A) = \stfail(B)$.
+\end{lemma}
+
+\begin{proof}
+Assuma sem perda de generalidade que~$|A| \leq |B|$. Então, pelo Corolário~\ref{col:R2}, temos que~$A \suff B$.
+Como~$\stfail(A) \suffp A \suff B$ e~$\stfail(A) \not\equiv A \equiv B$, vale que~$|\stfail(B)| \geq|\stfail(A)|$.
+Se~${A \suff \stfail(B)}$, pelo Lema~\ref{lem:R1}, temos~$D(\stfail(B)) \subseteq D(A) = D(B)$, uma contradição pois~$D(B) \subsetneq D(\stfail(B))$ pois~$\stfail(B) \suffp B$ e~$\stfail(B) \not\equiv B$.
+Assim sendo,~$\stfail(B) \suffp A$ e, como~$A \not\equiv \stfail(B)$, vale que~$|\stfail(B)| \leq |\stfail(A)|$ e o lema segue.
+\end{proof}
+
+\begin{lemma}
+\label{lem:R6}
+Se~$A \neq \emptystring$, então~$\stfail(A)$ é a maior string de sua classe de equivalência.
+\end{lemma}
+
+\begin{proof}
+Suponha que exista string~$B$ tal que~$B \equiv \stfail(A)$ e~$|B| > |\stfail(A)|$.
+Como~${\stfail(A) \suffp A}$, o Lema~\ref{lem:R1} implica que~$D(A) \subset D(\stfail(A)) = D(B)$. Usando o Lema~\ref{lem:R1.5}, temos que~$A \suffp B$ ou~$B \suffp A$. Se~$A \suffp B$ então~$D(B) \subset D(A)$, uma contradição. Se~$B \suffp A$ então temos uma contradição pois~$\stfail(A)$ é o \emph{maior} sufixo de~$A$ de uma classe diferente.
+\end{proof}
+
+\begin{corollary}
+\label{col:falha}
+A string~$\stfail_P(P)$ é o maior sufixo de~$P$ que ocorre pelo menos duas vezes em~$P$.
+\end{corollary}
+
+\begin{proof}
+Note que~$D(P) = \{|P|\}$, logo~$|D(\stfail(P))| > 1$, ou seja,~$\stfail(P)$ ocorre mais de uma vez em~$P$. Pelo Lema~\ref{lem:R6}, essa string é a maior de sua classe de equivalência.
+\end{proof}
+
+\begin{figure}
+\centering
+    \begin{tikzpicture}
+\matrix[matrix of nodes, nodes in empty cells,
+row 1/.style={nodes={draw, minimum size = 8mm}},
+row 1 column 14/.style={nodes={draw=none,right}}] (array) {
+ & & & & & & & & & & & & &~$B$  \\};
+ 
+\draw[decoration={brace, raise=5pt},decorate]
+  (array-1-7.north west) -- node[above=6pt] {$A$} (array-1-13.north east);
+
+\draw[decoration={brace, raise=5pt, mirror},decorate]
+  (array-1-5.south west) -- node[below=6pt] {$\stfail^i_P(B)$} (array-1-13.south east);
+  
+ 
+\draw[decoration={brace, raise=30pt, mirror},decorate]
+  (array-1-9.south west) -- node[below=31pt] {$\stfail^{i+1}_P(B)$} (array-1-13.south east);
+  
+ 
+\end{tikzpicture}
+
+    \caption{Explicação Lema~\ref{lem:multifail}.}
+    \label{fig:faili}
+\end{figure}
+
+\begin{lemma} \label{lem:multifail}
+Se~$A \suff B$, então existe~$i \geq 0$ tal que~$\stfail^i(B) \equiv A$, onde usamos que~${\stfail^0(B) = B}$ e~${\stfail^i(B) = \stfail(\stfail^{i-1}(B))}$.
+\end{lemma}
+
+\begin{proof}
+Escolha~$i \geq 0$ máximo tal que~${|\stfail^i(B)| \geq |A|}$. Então claramente~${A \suff \stfail^i(B)}$. A Figura~\ref{fig:faili} ilustra tal situação. Se~${A \not\equiv \stfail^i(B)}$ então pela definição de~$\stfail$ como \emph{maior} sufixo de outra classe de equivalência temos que~$|\stfail(\stfail^i(B))| \geq |A|$, uma contradição à maximalidade do~$i$ escolhido. Logo~${\stfail^i(B) \equiv A}$.
+\end{proof}
+
+Esses resultados são úteis para entender melhor a relação de equivalência por ocorrências à direita, e serão úteis na criação do algoritmo.
+A árvore de sufixos de~$P$ é uma árvore na qual cada vértice representa uma substring de~$P$. No autômato de sufixos, criaremos um digrafo no qual cada vértice representa uma classe de equivalência de ocorrências à direita em~$P$. Assim como na árvore, temos um vértice inicial, e arestas têm caracteres associados, mas no autômato dois caminhos podem levar ao mesmo vértice se as strings associadas a estes forem equivalentes.
+
+\section{Laminaridade}
+
+Seja~$\M{F}$ uma família de subconjuntos de um conjunto~$E$ não-vazio, ou seja, todo elemento de~$\M{F}$ é um subconjunto de~$E$. Dizemos que~$\M{F}$ é laminar se, para quaisquer~$A, B \in \M{F}$, temos que~$A \cap B = \emptyset$ ou~$A \subseteq B$ ou~$B \subseteq A$.
+
+\begin{theorem}
+\label{thm:laminar}
+Seja~$E$ um conjunto não vazio, e~$\M{F}$ uma família de subconjuntos de~$E$ com~$\emptyset \not\in \M{F}$. Se~$\M{F}$ é laminar então~$|\M{F}| \leq 2|E| - 1$, e se~$E \not\in \M{F}$ então~$|\M{F}| \leq 2|E| - 2$.
+\end{theorem}
+
+\begin{proof}
+A prova é por indução em~$|E|$. Se~$|E| = 1$, as afirmações valem trivialmente. Suponha que~$|E| > 1$ e que as afirmações valem para toda família laminar de um conjunto de tamanho menor que~$|E|$. Se~$E \in \M{F}$, vamos provar que~$\M{F}' \coloneqq \M{F} \setminus \{E\}$ tem tamanho no máximo~$2|E| - 2$, e então~$|\M{F}| = |\M{F}'| + 1 \leq 2|E| - 1$.
+
+Suponha então que~$E \not\in \M{F}$. Escolha~$A \in \M{F}$ maximal, ou seja, tal que não existe~$B \in \M{F}$ com~$A \subsetneq B$. Considere~$\M{F}_1 = \{X \in \M{F} : X \subseteq A\}$ e~$\M{F}_2 = \{X \in \M{F} : X \cap A = \emptyset\}$. Pela maximalidade de~$A$ e porque~$\M{F}$ é laminar, temos que~$\M{F}_1 \mathbin{\dot{\cup}} \M{F}_2 = \M{F}$. Além disso,~$\M{F}_1$ é laminar sobre o conjunto~$A$ e~$\M{F}_2$ é laminar sobre o conjunto~$E \setminus A$. Ademais,~${1 \leq |A| < |E|}$ e~${1 \leq |E \setminus A| < |E|}$.
+
+Aplicando a hipótese de indução a~$\M{F}_1$ e~$\M{F}_2$, temos que~$|\M{F}_1| \leq 2|A| - 1$ e~${|\M{F}_2| \leq 2|E \setminus A| - 1 = 2|E| - 2|A| - 1}$. Assim~$$|\M{F}| = |\M{F}_1 \mathbin{\dot{\cup}} \M{F}_2| = |\M{F}_1| + |\M{F}_2| \leq 2|A| - 1 + 2|E| - 2|A| - 1 = 2|E| - 2.$$
+\end{proof}
+
+\begin{prop}
+\label{thm:R3}
+A família de conjuntos~$F(P) = \{D(A) : A$ é uma substring de~$P\}$ é laminar, ou seja, se~$D(A) \cap D(B) \neq \emptyset$ então~$D(A) \subseteq D(B)$ ou~$D(B) \subseteq D(A)$.
+\end{prop}
+
+\begin{proof}
+Seja~$i \in D(A) \cap D(B)$. Então, pela definição,~${A \suff P[1\tdots i]}$ e~${B \suff P[1\tdots i]}$. Logo~${A \suff B}$ ou~${B \suff A}$ e pelo Lema~\ref{lem:R1} segue que~$D(B) \subseteq D(A)$ ou~$D(A) \subseteq D(B)$.
+\end{proof}
+
+\begin{corollary} \label{col:oclin}
+O tamanho de~$F(P)$ não excede~$2|P|$.
+\end{corollary}
+
+\begin{proof}
+Como~$D(A) \subseteq \{1, 2, \ldots, |P|\}$ para todo~$D(A) \in F(P)$ tal que~$A \neq \emptystring$,  pelo Teorema~\ref{thm:laminar} vale que~$|F(P) \setminus \{D(\emptystring)\}| \leq 2|P| - 1$ e então~${|F(P)| \leq 2|P|}$.
+\end{proof}
+
+Isso mostra que o número de classes de equivalência de~$\equiv_P$ é linear em~$|P|$, mesmo que o número de substrings distintas de~$P$ possa ser quadrático em~$|P|$.
+
+\section{Refinamento das classes de equivalência}
+\label{sec:refequiv}
+
+Construiremos o autômato de forma online, similarmente à árvore de sufixos, prefixo por prefixo. Por isso precisamos estudar como a relação de equivalência~$\equiv_P$ muda em relação a~$\equiv_{Pc}$, onde~$c$ é um caractere adicionado ao fim da string~$P$.
+
+Ao adicionar um caractere ao final de~$P$, apenas uma nova ocorrência à direita é possível: a ocorrência na posição~$|P| + 1$. Logo é claro que
+
+\begin{equation}
+\label{eq:dext}
+D_{Pc}(A) =
+\left \{
+  \begin{tabular}{ll}
+ ~$D_P(A) \cup \{|P| + 1\}$ & se~$A \suff Pc$ \\
+ ~$D_P(A)$ & caso contrário.
+  \end{tabular}
+\right .
+\end{equation}
+
+Uma consequência direta disso é a seguinte.
+
+\begin{prop} \label{prop:refin}
+Se~$A \equiv_{Pc} B$ então~$A \equiv_P B$, ou seja,~$\equiv_{Pc}$ é um refinamento de~$\equiv_P$.
+\end{prop}
+
+\begin{proof}
+Se~$A \suff Pc$, então~$D_{Pc}(A) = D_P(A) \cup \{|P| + 1\}$, e assim temos que~${|P| + 1 \in D_{Pc}(A) = D_{Pc}(B)}$. Logo,~$B \suff Pc$ e~$D_{Pc}(B) = D_P(B) \cup \{|P| + 1\}$. Isso implica que~$D_P(A) = D_P(B)$ e então~$A \equiv_P B$.
+
+Analogamente, se~$A \not\suff Pc$, então~${D_{Pc}(A) = D_P(A)}$, e~${|P|+1 \not\in D_{Pc}(A) = D_{Pc}(B)}$, logo~$D_{Pc}(B) = D_P(B)$ e assim~$A \equiv_P B$.
+\end{proof}
+
+O lema mostra que, quando adicionamos um caractere ao final de~$P$, as classes de equivalência ou se quebram em classes menores ou se mantém as mesmas, mas nunca se juntam com outras.
+
+
+Além disso, uma classe nova surge (a classe de equivalência de~$Pc$), e apenas uma classe de equivalência se quebra em classes menores.
+
+\begin{prop} \label{prop:newequiv}
+Seja~$X = \stfail_{Pc}(Pc)$. Se~$A \suff Pc$ e~$|A| > |X|$ então~$A \equiv_{Pc} Pc$.
+\end{prop}
+\begin{proof}
+Temos que~$D_{Pc}(Pc) = \{|P| + 1\} = D_{Pc}(A)$, pois pelo Corolário~\ref{col:falha}~$X$ é o \emph{maior} sufixo de~$Pc$ que ocorre em~$P$. Logo~$A$ não ocorre em~$P$.
+\end{proof}
+
+\begin{theorem}
+\label{thm:refnotX}
+Seja~$X = \stfail_{Pc}(Pc)$. Se~$A \equiv_P B$ e~$A \not\equiv_P X$, onde~$A$ e~$B$ são substrings de~$P$, então~$A \equiv_{Pc} B$.
+\end{theorem}
+
+\begin{proof}
+Vamos mostrar que~$A \suff Pc$ é equivalente a~$B \suff Pc$.
+Suponha que~${A \suff Pc}$. Então~${A \suff X}$, pois~$X$ é o maior sufixo de~$Pc$ que ocorre em~$P$ pelo Corolário~\ref{col:falha}.
+Pelo Lema~\ref{lem:multifail}, existe~${i \geq 0}$ tal que~${Y = \stfail_P^i(X) \equiv_P A}$. Como~${A \not\equiv_P X}$, temos que~${i > 0}$ e pelo Lema~\ref{lem:R6} vale que~$Y$ é a maior string de sua classe de equivalência. Assim, pelo Corolário~\ref{col:R2}, temos que~${B \suff Y \suffp X \suffp Pc}$.
+
+Como não usamos nenhuma característica especial de~$A$ acima, de maneira semelhante podemos provar que~$B \suff Pc$ implica~$A \suff Pc$. Como~$A \suff Pc$ é equivalente a~$B \suff Pc$, temos por (\ref{eq:dext}) que~$A \equiv_{Pc} B$.
+\end{proof}
+
+Esse teorema mostra que, entre as classes de equivalência das substrings de~$P$, apenas a classe de~$X$ pode se dividir, todas as outras continuam as mesmas.
+
+
+\begin{figure}
+\centering
+    \begin{tikzpicture}
+\matrix[matrix of nodes, nodes in empty cells,
+row 1/.style={nodes={draw, minimum size = 5mm}},
+row 1 column 23/.style={nodes={draw=none,right}}] (array) {
+ & & & & & & & & & & & & & & & & & & & & & &~$Pc$  \\};
+ 
+\draw[decoration={brace, raise=5pt},decorate]
+  (array-1-18.north west) -- node[above=6pt] {$X$} (array-1-22.north east);
+
+\draw[decoration={brace, raise=5pt, mirror},decorate]
+  (array-1-20.south west) -- node[below=6pt] {$|A| \leq |X|$} (array-1-22.south east);
+ 
+ 
+\draw[decoration={brace, raise=5pt},decorate]
+  (array-1-10.north west) -- node[above=6pt] {$X$} (array-1-14.north east);
+
+\draw[decoration={brace, raise=5pt, mirror},decorate]
+  (array-1-5.south west) -- node[below=6pt] {$Y$} (array-1-14.south east);
+ 
+\draw[decoration={brace, raise=20pt},decorate]
+  (array-1-8.north west) -- node[above=21pt] {$|A| > |X|$} (array-1-14.north east);
+  
+ 
+\end{tikzpicture}
+
+    \caption{Explicação Teorema~\ref{thm:refX}.}
+    \label{fig:teo10}
+\end{figure}
+
+\begin{theorem}
+\label{thm:refX}
+Seja~$X = \stfail_{Pc}(Pc)$, e~$Y$ uma string de comprimento máximo tal que~$X \equiv_P Y$. Seja~$A$ uma substring de~$P$ tal que~$A \equiv_P X$, então
+\[
+A \equiv_{Pc}
+\left \{
+  \begin{tabular}{ll}
+ ~$X$ & se~$|A| \leq |X|$ \\
+ ~$Y$ & caso contrário.
+  \end{tabular}
+\right .
+\]
+\end{theorem}
+
+\begin{proof}
+Pelo Lema~\ref{lem:R6}, temos que~$X$ deve ser o maior de sua classe de equivalência em relação a~$Pc$, mas não a~$P$. Por isso pode ser que~$Y \neq X$. Nesse caso,~$X \suffp Y$ pelo Corolário~\ref{col:R2}. Isso pode ocorrer como na Figura~\ref{fig:teo10}. Note que~$X \suffp Y$ mas~$Y \not\suff Pc$.
+
+Por (\ref{eq:dext}), a classe de equivalência de~$X$ se divide em no máximo duas classes: a dos elementos que são sufixos de~$Pc$ e a dos elementos que não são sufixos de~$Pc$. Se~$|A| \leq |X|$, usando o Corolário~\ref{col:R2}, temos que~$A \suff X \suff Pc$. Logo~$A$ continua na mesma classe que~$X$.
+Se~$|A| > |X|$, então~$X \suffp A$ e como~$X$ é o \emph{maior} sufixo de~$Pc$ que ocorre em~$P$, pelo Corolário~\ref{col:falha}, temos que~$A \not\suff Pc$ e também~$Y \not\suff Pc$. Logo ambos~$A$ e~$Y$ continuam na mesma classe de equivalência de~$\equiv_{Pc}$, diferente da classe de~$X$.
+\end{proof}
+
+\section{Representação}
+
+A teoria desenvolvida já dá uma ideia de como escrever um algoritmo para construir o autômato. Queremos construir um DAG (Grafo Dirigido Acíclico) em que cada nó represente uma classe de equivalência de~$\equiv_P$ (ou seja, um conjunto de ocorrências à direita), e uma aresta indique, ao adicionar um caractere ao final de uma string da classe de equivalência do nó cabeça da aresta, para qual classe de equivalência esta string muda. A Proposição~\ref{prop:classc} mostra que a classe de equivalência ao adicionar um caractere não depende da string escolhida.
+
+O DAG terá um nó inicial (chamaremos de raiz) que indica o nó relativo à classe de equivalência de~$\emptystring$. Um caminho a partir da raiz representa uma substring de~$P$, e note que vários caminhos podem levar ao mesmo nó.
+
+A Seção~\ref{sec:refequiv} mostra como atualizar esses nós ao adicionar um caractere a~$P$. A Proposição~\ref{prop:newequiv} mostra quais novas substrings existem, que tem a mesma classe que a string~$Pc$. O Teorema~\ref{thm:refnotX} prova que apenas a classe de~${X = \stfail_{Pc}(Pc)}$ muda, podendo se particionar em duas. Esse particionamento é então detalhado no Teorema~\ref{thm:refX}.
+
+Seja~$u$ uma classe de equivalência de~$\equiv_P$. Usaremos que~$u$ é um nó do autômato, e que~$u.f$ é a lista de adjacências de~$u$, ou seja, guarda todas as arestas que saem de~$u$, indexadas por seu caractere. Assim como anteriormente,~$u.f$ é implementada usando um vetor de~$|\E|$ posições. Diferentemente da árvore de sufixos, cada aresta representa apenas um caractere, logo a implementação dessa lista é mais simples. Usamos que~$S(u)$ é a maior string da classe~$u$.
+
+Usaremos que~$u.\stfail$ é a classe de equivalência da string de falha de alguma string da classe~$u$. Note que, pelo Lema~\ref{lem:R4}, esse valor independe da string escolhida na classe~$u$, logo está bem definido. Usaremos que~$u.L$ é o tamanho da maior string em~$u$, ou seja, é~$|S(u)|$. Além disso, usamos~$\textbf{new } \node(x)$ para representar a criação de um nó com campo~$L$ inicializado com~$x$, lista de adjacências vazia e campo~$\stfail$ nulo.
+
+O autômato será construído adicionando um caractere por vez ao final da string. Assim, ao construir o autômato de~$Pc$, é necessário atualizar as falhas~$\stfail_P$ para~$\stfail_{Pc}$, e o seguinte lema ajuda nisso.
+
+\begin{lemma} \label{lem:failpc}
+Se~$A \suff P$ e~$\stfail_{Pc}(Ac) \neq \emptystring$, então~${\stfail_{Pc}(Ac) = \stfail_P^i(A)c}$ para algum~${i > 0}$ e, para todo~$j < i$, vale que~$\stfail_P^j(A)c \equiv_P Ac$.
+\end{lemma}
+
+\begin{proof}
+Seja~${Bc = \stfail_{Pc}(Ac)}$. Pela definição de~$\stfail$, temos que~${B \suff A}$. Suponha que exista~${Z \equiv_P B}$ tal que~$B \suffp Z$. Então, pela Proposição~\ref{prop:classc}, vale que~${Bc \equiv_P Zc}$, e como ambos~$B$ e~$Z$ são sufixos de~$P$, vale que~${\stfail_{Pc}(Ac) \equiv_{Pc} Zc}$ e~${|Zc| > |\stfail_{Pc}(Ac)|}$, uma contradição pelo Lema~\ref{lem:R6}.
+Logo~$B = \stfail_P^i(A)$ para algum~$i > 0$ (caso contrário,~$\stfail$ ``pularia'' uma classe de equivalência), e assim~$\stfail_{Pc}(Ac) = \stfail_P^i(A)c$.
+
+Pela definição de~$\stfail$, para todo~$j < i$, vale~${\stfail_P^j(A)c \equiv_{Pc} Ac}$ e, usando a Proposição~\ref{prop:refin}, temos~${\stfail_P^j(A)c \equiv_P Ac}$.
+\end{proof}
+
+\section{Implementação}
+
+O algoritmo no Código~\ref{lst:suffauto} constrói o autômato de sufixos para uma string~$P$, de acordo com o que foi discutido. A Figura~\ref{fig:bananaauto} ilustra como a construção funciona para a string~\texttt{banana}.
+
+\begin{algorithm}
+\caption{Autômato de sufixos em tempo linear}
+\label{lst:suffauto}
+\begin{algorithmic}[1]
+\Function{BuildSuffixAutomaton}{$P$}
+    \State $\last = \root = \New \node(0)$ \label{auto:init}
+    \For{$i = 1 \To |P|$} \label{auto:for}
+        \State $p = \last$
+        \State $\last = \New \node(i)$ \Comment{classe da string~$P[1\tdots i]$}
+        \While{$p \neq \Null \And p.f[P[i]] = \Null$} \label{auto:while1s}
+            \State $p.f[P[i]] = \last$ \label{auto:newclass}
+            \State $p = p.\stfail$ \label{auto:while1e}
+        \EndWhile
+        \If{$p = \Null$}
+            \State $\last.\stfail = \root$ \label{auto:caso1}
+        \Else
+            \State $y = p.f[P[i]]$ \Comment{$X$ é a string~$S(p)P[i]$} \label{auto:caso23} \label{auto:findX}
+            \If{$y.L = p.L + 1$} \Comment{se~$X = S(y)$} \label{auto:caso2s}
+                \State $\last.\stfail = y$ \label{auto:caso2e}
+            \Else \Comment{a classe de~$X$ se divide em duas}
+                \State $x = \New \node(p.L + 1)$ \label{auto:caso3s}
+                \State $x.f = y.f$ \label{auto:copyf}
+                \State $x.\stfail = y.\stfail$
+                \State $y.\stfail = \last.\stfail = x$ \label{auto:failupd}
+                \While{$p \neq \Null \And p.f[P[i]] = y$} \label{auto:while2s}
+                    \State $p.f[P[i]] = x$ \Comment{Trocando adjacência de~$y$ para~$x$}
+                    \State $p = p.\stfail$ \label{auto:caso3e} \label{auto:while2e}
+                \EndWhile
+            \EndIf
+        \EndIf
+    \EndFor
+    \State $\Return$~$\root$
+\EndFunction
+\end{algorithmic}
+\end{algorithm}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%% CONSTRUCAO BANANA %%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}
+\subfloat[$\emptystring$] {
+\begin{minipage}{0.5\textwidth}
+\centering
+\hspace{-1.6cm}
+\begin{tikzpicture}[->,>=stealth',shorten >=1pt,node distance=2cm, auto, initial text={root}]
+\node[initial, state] (0) {};
+
+\end{tikzpicture}
+\end{minipage}
+}
+\hfill
+\subfloat[b] {
+\begin{minipage}{0.5\textwidth}
+\hspace{-1.5cm}
+\centering
+\begin{tikzpicture}[->,>=stealth',shorten >=1pt,node distance=2cm, auto, initial text={root}]
+\node[initial, state] (0) {};
+\node[state] (1) [right of=0] {};
+
+
+\path (0) edge              node {b} (1);
+
+\end{tikzpicture}
+\end{minipage}
+}
+\hfill
+\subfloat[ba] {
+\begin{minipage}{0.35\textwidth}
+\centering
+\begin{tikzpicture}[->,>=stealth',shorten >=1pt,node distance=2cm, auto, initial text={root}]
+\node[initial, state] (0) {};
+\node[state] (1) [right of=0] {};
+\node[state] (2) [right of=1] {};
+
+
+\path (0) edge              node {b} (1)
+          edge [bend left]  node {a} (2)
+      (1) edge              node {a} (2);
+
+\end{tikzpicture}
+\end{minipage}
+}
+\hfill
+\subfloat[ban] {
+\begin{minipage}{0.5\textwidth}
+\centering
+\begin{tikzpicture}[->,>=stealth',shorten >=1pt,node distance=2cm, auto, initial text={root}]
+\node[initial, state] (0) {};
+\node[state] (1) [right of=0] {};
+\node[state] (2) [right of=1] {};
+\node[state] (3) [right of=2] {};
+
+
+\path (0) edge              node {b} (1)
+          edge [bend left]  node {a} (2)
+          edge [bend right] node {n} (3)
+      (1) edge              node {a} (2)
+      (2) edge              node {n} (3);
+
+\end{tikzpicture}
+\end{minipage}
+}
+\hfill
+\subfloat[bana] {
+\begin{minipage}{\textwidth}
+\centering
+\begin{tikzpicture}[->,>=stealth',shorten >=1pt,node distance=2cm, auto, initial text={root}]
+\node[initial, state] (0) {};
+\node[state] (1) [right of=0] {};
+\node[state] (2) [right of=1] {};
+\node[state] (3) [right of=2] {};
+\node[state] (4) [right of=3] {};
+\node[state] (7) [below of=2] {};
+
+
+\path (0) edge              node {b} (1)
+          edge [bend left]  node {n} (3)
+          edge [bend right] node {a} (7)
+      (1) edge              node {a} (2)
+      (2) edge              node {n} (3)
+      (3) edge              node {a} (4)
+      (7) edge [bend right] node {n} (3);
+
+\path (2) edge [dotted,>=latex']             node {} (7)
+      (4) edge [dotted,>=latex',bend left]   node {} (7.-25);
+
+\end{tikzpicture}
+\end{minipage}
+}
+\hfill
+\subfloat[banan] {
+\begin{minipage}{\textwidth}
+\centering
+\begin{tikzpicture}[->,>=stealth',shorten >=1pt,node distance=2cm, auto, initial text={root}]
+\node[initial, state] (0) {};
+\node[state] (1) [right of=0] {};
+\node[state] (2) [right of=1] {};
+\node[state] (3) [right of=2] {};
+\node[state] (4) [right of=3] {};
+\node[state] (5) [right of=4] {};
+\node[state] (7) [below of=2] {};
+\node[state] (8) [below of=3] {};
+
+
+\path (0) edge              node {b} (1)
+          edge [bend right] node {a} (7)
+      (0.-30) edge          node {n} (8.130)
+      (1) edge              node {a} (2)
+      (2) edge              node {n} (3)
+      (3) edge              node {a} (4)
+      (4) edge              node {n} (5)
+      (7) edge              node[below] {n} (8)
+      (8) edge              node {a} (4);
+
+\path (2) edge [dotted,>=latex']             node {} (7)
+      (3) edge [dotted,>=latex']             node {} (8)
+      (5) edge [dotted,>=latex',bend left]   node {} (8)
+      (4) edge [dotted,>=latex']             node {} (7);
+
+\end{tikzpicture}
+\end{minipage}
+}
+\hfill
+\subfloat[banana]{
+\begin{minipage}{\textwidth}
+\centering
+\begin{tikzpicture}[->,>=stealth',shorten >=1pt,node distance=2cm, auto, initial text={root}]
+\node[initial, state] (0) {};
+\node[state] (1) [right of=0] {};
+\node[state] (2) [right of=1] {};
+\node[state] (3) [right of=2] {};
+\node[state] (4) [right of=3] {};
+\node[state] (5) [right of=4] {};
+\node[state] (6) [right of=5] {};
+\node[state] (7) [below of=2] {};
+\node[state] (8) [below of=3] {};
+\node[state] (9) [below of=4] {};
+
+
+\path (0) edge              node {b} (1)
+      (0) edge [bend right] node {a} (7)
+      (0.-30) edge          node {n} (8.130)
+      (1) edge              node {a} (2)
+      (2) edge              node {n} (3)
+      (3) edge              node {a} (4)
+      (4) edge              node {n} (5)
+      (5) edge              node {a} (6)
+      (7) edge              node[below] {n} (8)
+      (8) edge              node {a} (9)
+      (9) edge              node {n} (5);
+
+\path (2) edge [dotted,>=latex']             node {} (7)
+      (3) edge [dotted,>=latex']             node {} (8)
+      (4) edge [dotted,>=latex']             node {} (9)
+      (5) edge [dotted,>=latex']             node {} (8)
+      (6) edge [dotted,>=latex',bend left]   node {} (9)
+      (9) edge [dotted,>=latex',bend left]   node {} (7);
+
+\end{tikzpicture}
+\end{minipage}
+}
+
+\caption{Construção do autômato de sufixos de \texttt{banana}, falhas desenhadas pontilhadas. As falhas para a raiz não estão desenhadas para não obstruir a imagem.}
+\label{fig:bananaauto}
+\end{figure}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%% FIM CONSTRUCAO BANANA %%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+\begin{invar}
+No início da~$i$-ésima iteração do \keyword{for} da linha~\nref{auto:for},~$\root$ é a raiz do autômato de~$P[1\tdots i-1]$ e~$\last$ é o nó que representa a classe de~$P[1\tdots i-1]$ nesse autômato.
+\end{invar}
+
+\begin{proof}
+Na primeira iteração do \keyword{for}, o autômato está corretamente calculado, pois o autômato de uma string vazia é apenas um nó (associado à classe da string~$\emptystring$), e a linha~\nref{auto:init} inicializa corretamente os campos~$\root$ e~$\last$.
+
+No começo de uma iteração, temos o autômato de~$P[1\tdots i-1]$ e queremos calcular o autômato de~$P[1\tdots i]$, para que o invariante continue valendo. Para continuar com a mesma notação de antes, vamos usar que temos o autômato de~${Q = P[1\tdots i-1]}$ e queremos calcular o autômato de~$Qc$, onde~${c = P[i]}$.
+
+Uma nova classe de equivalência sempre se forma, a de~$Qc$, e de acordo com a Proposição~\ref{prop:newequiv}, todos os sufixos de~$Qc$ maiores que~$X = \stfail_{Qc}(Qc)$ estão nessa classe de equivalência. A variável~$\last$ é atualizada para o novo nó que representará essa classe. A variável~$p$ passa a guardar o valor antigo de~$\last$, e será utilizada para iterar pelas classes dos sufixos de~$Q$.
+
+O \keyword{while} nas linhas~\nref{auto:while1s}-\nref{auto:while1e} itera pelas classes de equivalência dos sufixos de~$Q$ enquanto~${p.f[c] = \keyword{null}}$, ou seja, enquanto~${S(p)c \equiv_Q Qc}$ (pois~${D_Q(Qc) = \emptyset}$). Vale então, pelo Lema~\ref{lem:failpc}, que após esse \keyword{while}, se temos~$p \neq \keyword{null}$ então~${S(p)c = X}$, e assim o nó~$p.f[c]$ é a classe de equivalência de~$X$. Se~${p = \keyword{null}}$, então o caractere~$c$ não ocorre em~$Q$ e a linha~\nref{auto:caso1} corretamente atualiza a falha~$\stfail$ de~$\last$ para indicar a raiz, pois nesse caso~${\stfail_{Qc}(Qc) = \emptystring}$.
+Note que a linha~\nref{auto:newclass} atualiza a lista de adjacências dos nós acessados por~$p$, e está correta pela Proposição~\ref{prop:newequiv}.
+
+Se a linha~\nref{auto:caso23} é atingida, temos que~$y$ é a classe de equivalência da string~$X$. Então, pelo Teorema~\ref{thm:refX}, essa classe pode se quebrar em duas classes de equivalência. As linhas~${\nref{auto:caso2s}\text{-}\nref{auto:caso2e}}$ tratam o caso em que~$X = S(y)$, ou seja, no teorema temos~${X = Y}$ e a classe de equivalência não se separa.
+As linhas~\nref{auto:caso3s}-\nref{auto:caso3e} tratam o caso em que~$S(y) = Y \neq X$. Nesse caso, é necessário quebrar a classe em duas, e o novo nó criado~$x$ vai ser a classe das strings em~$y$ com tamanho que não excede~$|X| = p.L + 1$.
+A linha~\nref{auto:copyf} copia a lista de adjacências de~$y$ para~$x$, já que as adjacências continuam iguais, e a linha seguinte copia a falha~$\stfail$ de~$y$ para~$x$.
+A linha~\nref{auto:failupd} atualiza as falhas de~$\last$ e~$y$, pois ambas devem ser~$x$. De fato,~$\last.\stfail = x$ pois a string~${X = \stfail_{Qc}(Qc)}$ está em~$x$ e~$y.\stfail = x$ pois~$X \suffp Y$ e tem tamanho máximo, já que antes~$Y$ e~$X$ estavam na mesma classe.
+
+Resta atualizar todo nó~$u$ tal que~$u.f[c] = y$ e~$|S(u)| \leq |X|$ para~$u.f[c] = x$, então pelo Teorema~\ref{thm:refX} essas classes estarão corretas. Note que, para tais nós~$u$, teremos~${S(u)c \suff X = S(p)c}$, e assim podemos acessá-los pelas falhas de~$p$.
+O~\keyword{while} das linhas~\nref{auto:while2s}-\nref{auto:while2e} atualiza as listas de adjacências necessárias, pois iteramos enquanto~${p.f[c] = y}$, ou seja, enquanto~${S(p)c \equiv_Q X}$.
+
+Pelo Teorema~\ref{thm:refnotX}, todas as outras classes de equivalências continuam as mesmas, e assim o autômato de~$Qc = P[1\tdots i]$ é corretamente calculado, mantendo o invariante.
+\end{proof}
+
+Pelo invariante, temos que ao final do algoritmo o autômato de sufixos de~$P$ está corretamente calculado.
+Provar a complexidade, contudo, não é tão simples. O Corolário~\ref{col:oclin} mostra que o número de nós do autômato é~$\Oh(|P|)$, mas ainda temos que o número de arestas pode ser~$\Theta(|P||\E|)$, se de cada vértice sair uma aresta para cada vértice, por exemplo. Esse, porém, não é caso, como mostraremos abaixo.
+
+Dizemos que um nó é final se ele representa uma classe de equivalência de um sufixo de~$P$. Um caminho da raiz à um nó final indica um sufixo de~$P$. A partir de um nó não-final, é sempre possível encontrar um caminho a um nó final, pois é sempre possível completar uma substring de~$P$ para que esta se torne um sufixo. Essas noções serão úteis na prova da proposição abaixo.
+
+\begin{prop} \label{prop:arlin}
+O número de arestas do autômato de sufixos de~$P$ não excede~$3|P| - 1$.
+\end{prop}
+
+\begin{proof}
+%Note que para cada nó, não existem dois caminhos de mesmo tamanho da raiz até este, pelo Lema~\ref{col:R2}. Assim, existe apenas uma aresta de caminho máximo que chega neste. Se escolhemos essas arestas para todos os nós diferentes da raiz temos então uma árvore geradora do autômato. Seja~$T$ essa árvore.
+
+Como a partir da raiz é possível atingir qualquer vértice, seja~$T$ uma árvore geradora qualquer do autômato.
+
+Para cada aresta~${e = uv}$ que não pertence a~$T$, considere a string~$AcB$, onde~$A$ é a string associada ao caminho da raiz a~$u$ na árvore~$T$,~$c$ é o caractere associado à aresta~$e$, e~$B$ é a string associada ao caminho de~$v$ a algum vértice final (tal caminho sempre existe pois é possível completar uma substring para um sufixo).
+
+Todas essas strings são distintas, já que cada uma tem a primeira aresta que não está em~$T$ diferente. Além disso, como acabam em um vértice final, temos que~${AcB \suff P}$, para toda~${e \not\in T}$. Logo, existem no máximo~$|P|$ arestas fora da árvore, pois~$P$ tem~$|P|$ sufixos. Pelo Corolário~\ref{col:oclin}, temos que o número de arestas em~$T$ é no máximo~${2|P| - 1}$, e assim o número de arestas do autômato é no máximo~${3|P| - 1}$.
+\end{proof}
+
+\begin{complexity}
+O algoritmo no Código~\ref{lst:suffauto} consome tempo~$\Theta(|P||\E|)$.
+\end{complexity}
+
+\begin{proof}
+
+Como o~\keyword{for} da linha~\nref{auto:for} tem exatamente~$|P|$ iterações, todas as operações neste que consomem tempo constante (atribuições, somas, etc.) vão no total consumir tempo~$\Oh(|P|)$. Se consideramos que as operações~${\textbf{new } \node}$ consomem tempo~$\Theta(|\E|)$, então no total elas consumirão tempo~$\Theta(|P||\E|)$. Resta analisar os~\keyword{while}s das linhas~\nref{auto:while1s} e~\nref{auto:while2s}, e a instrução da linha~\nref{auto:copyf}, pois esta não consome tempo constante.
+
+A instrução de copiar a lista de adjacências na linha~\nref{auto:copyf} precisa copiar cada aresta de uma lista de adjacências para outra. Como estamos considerando a implementação dessa lista usando um vetor, é necessário copiar todas as~$|\E|$ posições de um vetor para outro, então no total isso consome tempo~$\Oh(|P||\E|)$.
+
+Como já foi provado pelo Corolário~\ref{col:oclin} e pela Proposição~\ref{prop:arlin}, o número de vértices e arestas do autômato final é~$\Oh(|P|)$, e note que o número de vértices e arestas nunca diminui durante o algoritmo. Logo, as operações que ocorrem apenas uma vez por criação de nó ou aresta levam tempo linear.
+Isso mostra que o~\keyword{while} da linha~\nref{auto:while1s} consome tempo linear, pois cada iteração deste cria uma aresta.
+Resta então provar a complexidade do~\keyword{while} das linhas~\nref{auto:while2s}-\nref{auto:while2e}, pois nessas linhas estamos ``trocando'' arestas, então isso potencialmente poderia ocorrer muitas vezes.
+
+Considere novamente que na~$i$-ésima iteração temos o autômato de sufixos da string~${Q = P[1\tdots i-1]}$ e iremos adicionar o caractere~${c = P[i]}$. Na linha~\nref{auto:findX}, temos que~$y$ é a classe de equivalência de~$X = \stfail_{Qc}(Qc)$ na string~$Q$, então considere o Lema~\ref{lem:failpc}, onde~${Ac = X}$. Temos que~$p$ é a classe de equivalência de~$A$. Note que o~\keyword{while} itera pelas falhas de~$p$ enquanto~${p.f[c] = y}$, ou seja, enquanto~$S(p) \equiv_Q X$. Pelo Lema~\ref{lem:failpc}, temos que, quando esse laço acaba,~$p.f[c]$ é a classe de equivalência de~$\stfail_{Qc}(X)$ na string~$Qc$, ou seja, a classe de~$\stfail^2_{Qc}(Qc)$. Note que~${\stfail^2_{Qc}(Qc) = S(p)c}$, ou seja,~${|\stfail^2_{Qc}(Qc)| = p.L + 1}$.
+
+Agora vamos novamente usar um argumento similar ao da prova da complexidade do Aho-Corasick e da árvore de sufixos. Vamos observar o valor de~$p.L$ durante o algoritmo, ou seja, o tamanho da maior string de~$p$. Note que a operação~${p = p.\stfail}$ sempre diminui~$p.L$ em pelo menos~$1$. Em cada iteração,~$p$ é inicializado como~$\last$, ou seja, inicialmente~${p.L = i - 1}$. Perceba que as condições dos~\keyword{while}s das linhas~\nref{auto:while1s} e~\nref{auto:while2s} são sempre satisfeitas pelo menos uma vez (de fato, poderíamos ter usado~\keyword{do-while}), logo ao final da iteração temos~${p.L \leq |\stfail^2_{Q}(Q)|}$.
+
+Usando o que foi discutido anteriormente, temos~${|\stfail^2_{Qc}(Qc)| = p.L + 1 \leq |\stfail^2_{Q}(Q)| + 1}$. Assim vale que o valor de~$|\stfail^2_{P[1\tdots i]}(P[1\tdots i])|$ sempre aumenta em no máximo~$1$ entre iterações, e cada iteração do~\keyword{while} da linha~\nref{auto:while1s} ou da linha~\nref{auto:while2s} diminui esse valor em pelo menos~$1$. Seja~$w_i$ o número de iterações além da primeira dos dois~\keyword{while}s. Vale que~${w_i \leq (|\stfail^2_{P[1\tdots i-1]}(P[1\tdots i-1])| + 1) - |\stfail^2_{P[1\tdots i]}(P[1\tdots i])|}$. Para que essa notação funcione mesmo quando~${i = 1}$, vamos usar que~${\stfail_\emptystring(\emptystring) = \emptystring}$. Temos então que
+\begin{equation*} \begin{split}
+\sum\limits_{i=1}^{|P|}{w_i} & \leq \sum\limits_{i=1}^{|P|}{(|\stfail^2_{P[1\tdots i-1]}(P[1\tdots i-1])| - |\stfail^2_{P[1\tdots i]}(P[1\tdots i])| + 1)} \\
+                         & = |\stfail^2_\emptystring(\emptystring)| - |\stfail^2_P(P)| + |P| \quad\text{(soma telescópica)}\\
+                         & \leq |P| \quad\text{(pois~$|\stfail^2_\emptystring(\emptystring)| = 0$ e ~$|\stfail^2_P(P)| \geq 0$).}
+\end{split}
+\end{equation*}
+
+Isso prova que os \keyword{while}s levam tempo linear e assim o algoritmo tem complexidade de tempo~$\Theta(|P||\E|)$.
+
+\end{proof}
+
+É fácil ver que o espaço da estrutura criada também é~$\Theta(|P||\E|)$. Usando a implementação de listas de adjacências como ABBBs, usando o caractere de uma aresta como chave, e sua ponta final como valor, é possível provar de forma muito semelhante que o algoritmo consome tempo~$\Theta(|P|\log|\E|)$ e espaço~$\Theta(|P|)$.
+
+\section{Uso}
+
+Com o autômato de~$P$ construído, é simples saber se uma string~$S$ é substring de~$P$. Basta verificar se existe caminho~${S[1], S[2], \ldots, S[|S|]}$ no autômato, a partir da raiz.
+
+Contar o número de ocorrências ou enumerá-las não é tão simples. É necessário descobrir quais são os nós finais do nosso autômato.
+
+\begin{prop}
+Um nó do autômato de~$P$ é final se e somente se pertence ao conjunto~$\Path(\last) = \{\last, \last.\stfail, \last.\stfail.\stfail, \ldots, \root\}$.
+\end{prop}
+
+\begin{proof}
+O nó~$\last$ claramente é final, pois é a classe de equivalência de~$P$. Assim, como~${S(u.\stfail) \suffp S(u)}$ para qualquer~${u \neq root}$, pela definição de~$\stfail$, temos que qualquer elemento do conjunto~$\Path(\last)$ é um nó final. Por outro lado, se~${X \suff P}$, pelo Lema~\ref{lem:multifail}, existe~${i \geq 0}$ tal que~${\stfail^i(P) \equiv X}$, e portanto a classe de equivalência de~$X$ está em~$\Path(\last)$.
+\end{proof}
+
+Portanto, se adicionarmos um campo booleano~$\final$ à nossa implementação de nós, que é inicializado com~$\keyword{false}$, e indica se um nó é final ou não, o seguinte código pode ser adicionado ao final da criação do autômato de sufixos para marcar os nós finais corretamente.
+
+\begin{algorithm}
+\begin{algorithmic}[1]
+\State $p = \last$
+\While{$p \neq \Null$}
+    \State $p.\final = \True$
+    \State $p = p.\stfail$
+\EndWhile
+\end{algorithmic}
+\end{algorithm}
+
+Agora, para contar o número de ocorrências de alguma string~$S$ em~$P$, percorremos o caminho~${S[1], \ldots, S[|S|]}$ no autômato de sufixos de~$P$. Seja~$v$ o nó alcançado. O número de ocorrências de~$S$ em~$P$ é o número de caminhos distintos de~$v$ para um nó final, pois este é o número de formas de completar a string~$S$ para ser um sufixo de~$P$. Isso é similar a como, na árvore de sufixos, o número de ocorrências de uma substring representada por um nó é o número de folhas na subárvore deste.
+
+Como o autômato de sufixos é um DAG, ele tem uma ordenação topológica, e por isso calcular o número de caminhos a partir de cada vértice para algum nó final é simples. Para calcular uma ordenação topológica de um DAG, basta realizar uma DFS e armazenar os vértices por ordem inversa de finalização da DFS, como discutido por Cormen et al.~\cite[Seção 22.4]{cormen}.
+\newcommand{\Count}{\textsc{Count}}
+Dado um vetor~$\top$ representando uma ordenação topológica do autômato, ou seja, se~$\top[i] \top[j]$ é uma aresta, então~${i < j}$, é possível calcular o número de caminhos de~$u$ para algum vértice final ($\Count(u)$) usando a seguinte recorrência
+\[
+\Count(u) =
+\left \{
+  \begin{tabular}{ll}
+ ~$\sum\limits_{v \in u.f}{\Count(v)}$ & se~$u$ não é final \\
+ ~$1 + \sum\limits_{v \in u.f}{\Count(v)}$ & se~$u$ é final.
+  \end{tabular}
+\right .
+\]
+Ou seja, o número de caminhos de~$u$ para algum vértice final é o número de caminhos de seus vizinhos para algum vértice final (tratando o caso quando esses caminhos tem comprimento maior que~$0$), somado de~$1$ se~$u$ for final (tratando o caso quando o comprimento é~$0$). A recorrência está correta pois o digrafo é acíclico.
+
+O seguinte código determina o valor de~$\Count$ para cada vértice~$u$ em~$C[u]$.
+
+\begin{algorithm}
+\begin{algorithmic}[1]
+\For{$i = |\top| \DownTo 1$}
+    \State $C[\top[i]] = 0$
+    \For{$v \in \top[i].f$}
+        \State $C[\top[i]] \pluseq C[v]$
+    \EndFor
+    \If{$\top[i].\final$}
+        \State $C[\top[i]] \pluseq 1$
+    \EndIf
+\EndFor
+\end{algorithmic}
+\end{algorithm}
+
+Se temos como invariante que, ao analisar o vértice~$\top[i]$, todos os valores de~$C$ para vértices~$\top[j]$, com~${j > i}$, já estão calculados, então, como~$\top$ é uma ordenação topológica, todos os vértices adjacentes a~$\top[i]$ tem o valor correto, logo o valor~$C[\top[i]]$ é calculado corretamente. A base é trivial quando~$i = |\top|$.
+
+Logo, este código funciona e consome tempo proporcional ao número de vértices mais arestas do autômato, que é linear em~$|S|$, pelo Corolário~\ref{col:oclin} e pela Proposição~\ref{prop:arlin}.
